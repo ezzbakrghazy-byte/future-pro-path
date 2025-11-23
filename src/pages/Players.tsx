@@ -1,4 +1,5 @@
 import Navigation from "@/components/Navigation";
+import AICoachChat from "@/components/AICoachChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,11 @@ const Players = () => {
                 </CardDescription>
               </CardHeader>
             </Card>
+          </div>
+
+          {/* AI Coach Chat */}
+          <div className="mb-12">
+            <AICoachChat />
           </div>
 
           {/* Features Overview */}

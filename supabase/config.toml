@@ -1,0 +1,4 @@
+project_id = "iizdsoqzntkloqqrnerj"
+
+[functions.sports-coach-chat]
+verify_jwt = false
