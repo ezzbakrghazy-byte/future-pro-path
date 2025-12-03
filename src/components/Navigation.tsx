@@ -26,6 +26,13 @@ const Navigation = () => {
               Players
             </NavLink>
             <NavLink
+              to="/video-analysis"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              activeClassName="text-foreground font-semibold"
+            >
+              Video Analysis
+            </NavLink>
+            <NavLink
               to="/clubs"
               className="text-muted-foreground hover:text-foreground transition-colors"
               activeClassName="text-foreground font-semibold"
@@ -68,6 +75,14 @@ const Navigation = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Players
+              </NavLink>
+              <NavLink
+                to="/video-analysis"
+                className="text-muted-foreground hover:text-foreground transition-colors px-4 py-2"
+                activeClassName="text-foreground font-semibold"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Video Analysis
               </NavLink>
               <NavLink
                 to="/clubs"
