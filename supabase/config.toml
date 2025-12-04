@@ -5,3 +5,9 @@ verify_jwt = false
 
 [functions.analyze-video]
 verify_jwt = false
+
+[functions.generate-scouting-report]
+verify_jwt = false
+
+[functions.player-club-matching]
+verify_jwt = false
