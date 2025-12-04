@@ -6,18 +6,18 @@ const corsHeaders = {
 };
 
 const POSITION_FOCUS: Record<string, string> = {
-  GK: "shot stopping, positioning, distribution, command of area, reflexes",
-  CB: "aerial duels, tackling, positioning, passing out from back, reading the game",
-  LB: "overlapping runs, crossing, defensive positioning, stamina, 1v1 defending",
-  RB: "overlapping runs, crossing, defensive positioning, stamina, 1v1 defending",
-  CDM: "interceptions, tackling, passing range, positioning, breaking up play",
-  CM: "passing accuracy, ball retention, box-to-box running, vision, work rate",
-  CAM: "creativity, key passes, shooting from distance, dribbling, final third play",
-  LM: "crossing, pace, dribbling, tracking back, width creation",
-  RM: "crossing, pace, dribbling, tracking back, width creation",
-  LW: "1v1 dribbling, cutting inside, shooting, pace, creativity",
-  RW: "1v1 dribbling, cutting inside, shooting, pace, creativity",
-  ST: "finishing, movement off the ball, hold-up play, aerial ability, positioning in the box",
+  GK: "shot stopping, positioning, distribution, command of area, reflexes, communication, one-on-one situations",
+  CB: "aerial duels, tackling, positioning, passing out from back, reading the game, leadership, recovery runs",
+  LB: "overlapping runs, crossing, defensive positioning, stamina, 1v1 defending, link-up play",
+  RB: "overlapping runs, crossing, defensive positioning, stamina, 1v1 defending, link-up play",
+  CDM: "interceptions, tackling, passing range, positioning, breaking up play, shielding defense",
+  CM: "passing accuracy, ball retention, box-to-box running, vision, work rate, pressing triggers",
+  CAM: "creativity, key passes, shooting from distance, dribbling, final third play, off-the-ball movement",
+  LM: "crossing, pace, dribbling, tracking back, width creation, combination play",
+  RM: "crossing, pace, dribbling, tracking back, width creation, combination play",
+  LW: "1v1 dribbling, cutting inside, shooting, pace, creativity, pressing from front",
+  RW: "1v1 dribbling, cutting inside, shooting, pace, creativity, pressing from front",
+  ST: "finishing, movement off the ball, hold-up play, aerial ability, positioning in the box, pressing triggers",
 };
 
 serve(async (req) => {
@@ -26,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { videoId, videoUrl, position, fileName } = await req.json();
+    const { videoId, videoUrl, position, fileName, playerAge, playerHeight } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
@@ -35,58 +35,119 @@ serve(async (req) => {
 
     const positionFocus = POSITION_FOCUS[position] || "overall football skills";
 
-    const systemPrompt = `You are an expert football scout and performance analyst with decades of experience evaluating players at all levels. You use advanced motion tracking and event detection to analyze player footage.
+    const systemPrompt = `You are an elite football scout and performance analyst with 25+ years of experience at top European clubs. You use advanced biomechanical analysis and tactical pattern recognition.
 
-Analyze the uploaded video of a ${position} player. Focus on: ${positionFocus}.
+Analyze the uploaded video of a ${position} player${playerAge ? ` (age ${playerAge})` : ""}${playerHeight ? ` (height ${playerHeight}cm)` : ""}.
 
-You must return a JSON response with this exact structure:
+Primary focus areas for ${position}: ${positionFocus}.
+
+Return a comprehensive JSON analysis with this EXACT structure:
 {
   "overall_score": <number 1-100>,
+  "potential_rating": <number 1-100>,
   "technical_skills": {
-    "passing": <number 1-100>,
-    "ball_control": <number 1-100>,
-    "shooting": <number 1-100>,
-    "dribbling": <number 1-100>
+    "passing": { "score": <1-100>, "analysis": "<specific observation>" },
+    "ball_control": { "score": <1-100>, "analysis": "<specific observation>" },
+    "shooting": { "score": <1-100>, "analysis": "<specific observation>" },
+    "dribbling": { "score": <1-100>, "analysis": "<specific observation>" },
+    "heading": { "score": <1-100>, "analysis": "<specific observation>" },
+    "weak_foot": { "score": <1-5>, "analysis": "<specific observation>" }
   },
   "physical_metrics": {
-    "speed": <number 1-100>,
-    "stamina": <number 1-100>,
-    "agility": <number 1-100>
+    "speed": { "score": <1-100>, "analysis": "<observation on acceleration/top speed>" },
+    "stamina": { "score": <1-100>, "analysis": "<observation on work rate over time>" },
+    "agility": { "score": <1-100>, "analysis": "<observation on change of direction>" },
+    "strength": { "score": <1-100>, "analysis": "<observation on physical duels>" },
+    "jumping": { "score": <1-100>, "analysis": "<observation on aerial ability>" }
   },
   "tactical_awareness": {
-    "positioning": <number 1-100>,
-    "decision_making": <number 1-100>,
-    "vision": <number 1-100>
+    "positioning": { "score": <1-100>, "analysis": "<specific tactical observation>" },
+    "decision_making": { "score": <1-100>, "analysis": "<specific decision observation>" },
+    "vision": { "score": <1-100>, "analysis": "<observation on reading the game>" },
+    "pressing": { "score": <1-100>, "analysis": "<observation on defensive contribution>" },
+    "off_ball_movement": { "score": <1-100>, "analysis": "<observation on runs/positioning>" }
+  },
+  "mental_attributes": {
+    "composure": <1-100>,
+    "concentration": <1-100>,
+    "leadership": <1-100>,
+    "work_rate": <1-100>
   },
   "events_detected": {
-    "passes": <number>,
-    "shots": <number>,
-    "tackles": <number>,
+    "passes_completed": <number>,
+    "passes_attempted": <number>,
+    "key_passes": <number>,
+    "shots_on_target": <number>,
+    "shots_off_target": <number>,
+    "tackles_won": <number>,
+    "tackles_lost": <number>,
     "interceptions": <number>,
-    "sprints": <number>
+    "aerial_duels_won": <number>,
+    "aerial_duels_lost": <number>,
+    "dribbles_completed": <number>,
+    "dribbles_failed": <number>,
+    "sprints": <number>,
+    "touches": <number>
   },
-  "summary": "<2-3 sentence professional summary of the player's performance>",
-  "improvement_tips": ["<tip 1>", "<tip 2>", "<tip 3>"]
+  "frame_analysis": [
+    {
+      "timestamp": "<MM:SS>",
+      "event_type": "<Pass/Shot/Tackle/Dribble/Run/Position>",
+      "description": "<detailed 20-word description of the action>",
+      "rating": <1-10>,
+      "coaching_point": "<what was done well or could improve>"
+    }
+  ],
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "weaknesses": ["<weakness 1>", "<weakness 2>", "<weakness 3>"],
+  "summary": "<4-5 sentence professional scout report style summary>",
+  "player_comparison": "<name a professional player with similar style/attributes>",
+  "training_recommendations": [
+    {
+      "focus_area": "<skill to improve>",
+      "priority": "<High/Medium/Low>",
+      "drills": ["<drill 1>", "<drill 2>"],
+      "expected_improvement": "<what will improve with this training>",
+      "duration_weeks": <number>
+    }
+  ],
+  "recommended_playing_style": "<tactical system that suits this player>",
+  "club_fit_profile": {
+    "ideal_league_level": "<Elite/Top Division/Championship/Development>",
+    "playing_style_fit": ["<style 1>", "<style 2>"],
+    "development_potential": "<High/Medium/Low>",
+    "ready_for_first_team": <boolean>
+  }
 }
 
+Generate 5-8 frame_analysis entries covering different moments.
+Generate 3-5 training_recommendations.
 Be realistic but encouraging. Base scores on typical semi-professional youth player standards.`;
 
-    const userPrompt = `Analyze this football match video for a ${position} player.
-    
+    const userPrompt = `Perform comprehensive analysis of this football video for a ${position} player.
+
 File: ${fileName}
 Position: ${position}
+${playerAge ? `Age: ${playerAge}` : ""}
+${playerHeight ? `Height: ${playerHeight}cm` : ""}
 
-Provide comprehensive analysis including:
-1. Technical skill ratings
-2. Physical metrics
-3. Tactical awareness
-4. Key events detected (passes, shots, tackles, etc.)
-5. Professional summary
-6. 3 specific improvement tips
+Provide:
+1. Detailed technical skill ratings with specific observations
+2. Physical metrics with biomechanical insights
+3. Tactical awareness breakdown
+4. Mental attributes assessment
+5. Comprehensive event detection statistics
+6. Frame-by-frame analysis of 5-8 key moments
+7. Top 3 strengths and weaknesses
+8. Professional scout-style summary
+9. Similar professional player comparison
+10. Personalized training program recommendations
+11. Tactical system fit analysis
+12. Club level and readiness assessment
 
-Return ONLY valid JSON matching the required structure.`;
+Return ONLY valid JSON matching the required structure. No markdown formatting.`;
 
-    console.log("Calling Lovable AI for video analysis...");
+    console.log("Calling Lovable AI for enhanced video analysis...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -130,10 +191,8 @@ Return ONLY valid JSON matching the required structure.`;
       throw new Error("No content in AI response");
     }
 
-    // Parse the JSON response
     let analysis;
     try {
-      // Extract JSON from potential markdown code blocks
       const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || 
                         content.match(/```\n?([\s\S]*?)\n?```/) ||
                         [null, content];
@@ -143,10 +202,13 @@ Return ONLY valid JSON matching the required structure.`;
       throw new Error("Failed to parse analysis results");
     }
 
-    // Generate highlights based on analysis
-    const highlights = generateHighlights(analysis, position);
+    const highlights = analysis.frame_analysis || generateHighlights(analysis, position);
 
-    console.log("Analysis complete:", { overall_score: analysis.overall_score });
+    console.log("Enhanced analysis complete:", { 
+      overall_score: analysis.overall_score,
+      potential_rating: analysis.potential_rating,
+      frame_count: highlights.length 
+    });
 
     return new Response(
       JSON.stringify({ analysis, highlights }),
@@ -165,68 +227,73 @@ function generateHighlights(analysis: any, position: string) {
   const highlights = [];
   const events = analysis.events_detected || {};
   
-  // Generate timestamps and highlights based on events
   let currentTime = 0;
   
-  if (events.passes > 5) {
+  if (events.passes_completed > 5 || events.key_passes > 0) {
     highlights.push({
       timestamp: formatTime(currentTime + 120),
-      type: "Key Pass",
+      event_type: "Key Pass",
       description: "Excellent vision shown with a through ball that split the defense",
-      rating: Math.min(10, Math.round(analysis.tactical_awareness?.vision / 10) || 7),
+      rating: Math.min(10, Math.round((analysis.tactical_awareness?.vision?.score || 70) / 10)),
+      coaching_point: "Good awareness of teammates' runs"
     });
   }
 
-  if (events.shots > 0) {
+  if (events.shots_on_target > 0) {
     highlights.push({
       timestamp: formatTime(currentTime + 450),
-      type: "Shot on Target",
-      description: "Powerful strike from outside the box forcing a save",
-      rating: Math.min(10, Math.round(analysis.technical_skills?.shooting / 10) || 6),
+      event_type: "Shot on Target",
+      description: "Powerful strike from outside the box forcing a save from the goalkeeper",
+      rating: Math.min(10, Math.round((analysis.technical_skills?.shooting?.score || 60) / 10)),
+      coaching_point: "Good technique, consider shot placement"
     });
   }
 
-  if (events.tackles > 2) {
+  if (events.tackles_won > 2) {
     highlights.push({
       timestamp: formatTime(currentTime + 780),
-      type: "Defensive Action",
-      description: "Well-timed tackle to win back possession in the midfield",
+      event_type: "Tackle",
+      description: "Well-timed tackle to win back possession in the midfield area",
       rating: 8,
+      coaching_point: "Excellent timing and body positioning"
     });
   }
 
   if (events.sprints > 3) {
     highlights.push({
       timestamp: formatTime(currentTime + 1200),
-      type: "Sprint Recovery",
-      description: "Impressive pace shown tracking back to cover defensive position",
-      rating: Math.min(10, Math.round(analysis.physical_metrics?.speed / 10) || 7),
+      event_type: "Sprint Recovery",
+      description: "Impressive pace shown tracking back to cover defensive position effectively",
+      rating: Math.min(10, Math.round((analysis.physical_metrics?.speed?.score || 70) / 10)),
+      coaching_point: "Strong work rate and defensive awareness"
     });
   }
 
   if (events.interceptions > 1) {
     highlights.push({
       timestamp: formatTime(currentTime + 1650),
-      type: "Interception",
-      description: "Read the play excellently to intercept a dangerous pass",
-      rating: Math.min(10, Math.round(analysis.tactical_awareness?.positioning / 10) || 7),
+      event_type: "Interception",
+      description: "Read the play excellently to intercept a dangerous pass in transition",
+      rating: Math.min(10, Math.round((analysis.tactical_awareness?.positioning?.score || 70) / 10)),
+      coaching_point: "Excellent anticipation and reading of the game"
     });
   }
 
-  // Add position-specific highlight
   if (position === "ST" || position === "LW" || position === "RW") {
     highlights.push({
       timestamp: formatTime(currentTime + 2100),
-      type: "Attacking Move",
-      description: "Creative dribble past defender creating space in the final third",
-      rating: Math.min(10, Math.round(analysis.technical_skills?.dribbling / 10) || 7),
+      event_type: "Dribble",
+      description: "Creative dribble past defender creating space in the final third area",
+      rating: Math.min(10, Math.round((analysis.technical_skills?.dribbling?.score || 70) / 10)),
+      coaching_point: "Good close control and change of pace"
     });
   } else if (position === "CB" || position === "CDM") {
     highlights.push({
       timestamp: formatTime(currentTime + 2100),
-      type: "Defensive Header",
-      description: "Commanding aerial presence clearing danger from a set piece",
+      event_type: "Aerial Duel",
+      description: "Commanding aerial presence clearing danger from a set piece situation",
       rating: 8,
+      coaching_point: "Strong jumping and timing in aerial contests"
     });
   }
 
