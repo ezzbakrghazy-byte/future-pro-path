@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "ES2022",
+    "lib": ["ES2021"],
+    "types": ["https://deno.land/x/deno@v1.37.0/cli/dts/lib.deno.d.ts"],
+    "allowJs": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "noEmit": true
+  },
+  "include": [
+    "**/*.ts"
+  ]
+}

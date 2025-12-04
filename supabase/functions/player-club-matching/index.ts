@@ -1,73 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-// Sample club database - in production this would come from a database
-const CLUB_PROFILES = [
-  {
-    id: "1",
-    name: "Elite Youth Academy FC",
-    league: "Premier Development League",
-    level: "Elite",
-    playing_style: ["Possession-based", "High pressing"],
-    positions_needed: ["CM", "CB", "RW"],
-    age_preference: "16-19",
-    development_focus: true,
-    location: "England",
-    reputation: 85
-  },
-  {
-    id: "2", 
-    name: "Technical FC Academy",
-    league: "Championship Youth",
-    level: "Top Division",
-    playing_style: ["Technical football", "Build from back"],
-    positions_needed: ["CAM", "ST", "LB"],
-    age_preference: "17-21",
-    development_focus: true,
-    location: "Spain",
-    reputation: 78
-  },
-  {
-    id: "3",
-    name: "Athletic Development Club",
-    league: "First Division U21",
-    level: "Championship",
-    playing_style: ["Direct play", "Counter-attacking"],
-    positions_needed: ["ST", "LW", "CDM"],
-    age_preference: "18-22",
-    development_focus: true,
-    location: "Germany",
-    reputation: 72
-  },
-  {
-    id: "4",
-    name: "Rising Stars Academy",
-    league: "National Youth Premier",
-    level: "Development",
-    playing_style: ["Balanced", "Flexible formations"],
-    positions_needed: ["GK", "RB", "CM", "ST"],
-    age_preference: "15-18",
-    development_focus: true,
-    location: "France",
-    reputation: 65
-  },
-  {
-    id: "5",
-    name: "Pro Path United",
-    league: "Professional Reserve League",
-    level: "Top Division",
-    playing_style: ["High intensity", "Pressing"],
-    positions_needed: ["CB", "CDM", "RW", "LW"],
-    age_preference: "19-23",
-    development_focus: false,
-    location: "Italy",
-    reputation: 80
-  }
-];
+import {
+  corsHeaders,
+  getSupabaseClient,
+  getAuthenticatedUser,
+  validateRateLimit,
+  callLovableAI,
+  parseAIResponse,
+  createErrorResponse,
+  createSuccessResponse,
+} from "../_shared/utils.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -75,11 +16,62 @@ serve(async (req) => {
   }
 
   try {
-    const { playerProfile, analysisData, preferences } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    const token = getAuthenticatedUser(authHeader);
+    const supabase = getSupabaseClient(authHeader!);
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
+
+    if (userError || !user) {
+      return createErrorResponse("Unauthorized", 401);
+    }
+
+    // Rate limiting
+    const rateLimit = await validateRateLimit(
+      supabase,
+      user.id,
+      "player-club-matching",
+      20
+    );
+
+    if (!rateLimit.allowed) {
+      return createErrorResponse(
+        `Rate limit exceeded. Maximum 20 matching requests per day.`,
+        429
+      );
+    }
+
+    const { playerProfile, analysisData, preferences, playerId, videoAnalysisId } =
+      await req.json();
+
+    if (!playerProfile || !analysisData) {
+      return createErrorResponse(
+        "Missing required fields: playerProfile and analysisData",
+        400
+      );
+    }
+
+    // Fetch clubs from database
+    const { data: clubs, error: clubsError } = await supabase
+      .from("clubs")
+      .select("*")
+      .order("reputation", { ascending: false });
+
+    if (clubsError) {
+      console.error("Error fetching clubs:", clubsError);
+      return createErrorResponse("Failed to fetch clubs", 500);
+    }
+
+    if (!clubs || clubs.length === 0) {
+      return createErrorResponse("No clubs available for matching", 404);
+    }
+
+    if (!clubs || clubs.length === 0) {
+      return createErrorResponse("No clubs available for matching", 404);
     }
 
     const systemPrompt = `You are an expert football agent and career advisor who specializes in matching young players with suitable clubs. Analyze player profiles and club requirements to find optimal matches.
@@ -135,96 +127,67 @@ Player Preferences:
 ${JSON.stringify(preferences || {}, null, 2)}
 
 Available Clubs:
-${JSON.stringify(CLUB_PROFILES, null, 2)}
+${JSON.stringify(clubs, null, 2)}
 
-Analyze and rank all clubs by suitability. Consider:
-1. Position requirements vs player position
-2. Playing style compatibility
-3. Development philosophy match
-4. Age appropriateness
-5. Player skill level vs club level
-6. Career progression opportunities
-
-Return ONLY valid JSON.`;
+Analyze and rank all clubs by suitability. Return ONLY valid JSON.`;
 
     console.log("Running player-club matching...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
+    const response = await callLovableAI([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ]);
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
-      throw new Error("No content in AI response");
+      return createErrorResponse("No content in AI response", 500);
     }
 
-    let matchingResults;
-    try {
-      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || 
-                        content.match(/```\n?([\s\S]*?)\n?```/) ||
-                        [null, content];
-      matchingResults = JSON.parse(jsonMatch[1] || content);
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse matching results");
-    }
+    const matchingResults = parseAIResponse(content);
 
     // Add club details to matches
     matchingResults.matches = matchingResults.matches.map((match: any) => {
-      const clubDetails = CLUB_PROFILES.find(c => c.id === match.club_id);
+      const clubDetails = clubs.find((c) => c.id === match.club_id);
       return {
         ...match,
-        club_details: clubDetails || null
+        club_details: clubDetails || null,
       };
     });
 
-    console.log("Matching complete:", { 
+    // Save top matches to database
+    if (matchingResults.matches && matchingResults.matches.length > 0) {
+      const topMatches = matchingResults.matches.slice(0, 5); // Save top 5
+      const matchRecords = topMatches.map((match: any) => ({
+        user_id: user.id,
+        player_id: playerId || null,
+        club_id: match.club_id,
+        video_analysis_id: videoAnalysisId || null,
+        match_score: match.match_score,
+        match_grade: match.match_grade,
+        matching_data: match,
+        status: "pending",
+      }));
+
+      const { error: saveError } = await supabase
+        .from("club_matches")
+        .insert(matchRecords);
+
+      if (saveError) {
+        console.error("Error saving matches:", saveError);
+        // Continue even if save fails
+      }
+    }
+
+    console.log("Matching complete:", {
       matches_count: matchingResults.matches?.length,
-      top_match: matchingResults.top_recommendation?.club_id 
+      top_match: matchingResults.top_recommendation?.club_id,
     });
 
-    return new Response(
-      JSON.stringify(matchingResults),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return createSuccessResponse(matchingResults);
   } catch (error) {
     console.error("player-club-matching error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return createErrorResponse(error as Error);
   }
 });

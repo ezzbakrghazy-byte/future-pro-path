@@ -1,9 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  corsHeaders,
+  getSupabaseClient,
+  getAuthenticatedUser,
+  validateRateLimit,
+  callLovableAI,
+  parseAIResponse,
+  createErrorResponse,
+  createSuccessResponse,
+} from "../_shared/utils.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -11,11 +16,42 @@ serve(async (req) => {
   }
 
   try {
-    const { playerData, analysisData } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    const token = getAuthenticatedUser(authHeader);
+    const supabase = getSupabaseClient(authHeader!);
 
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
+
+    if (userError || !user) {
+      return createErrorResponse("Unauthorized", 401);
+    }
+
+    // Rate limiting
+    const rateLimit = await validateRateLimit(
+      supabase,
+      user.id,
+      "generate-scouting-report",
+      30
+    );
+
+    if (!rateLimit.allowed) {
+      return createErrorResponse(
+        `Rate limit exceeded. Maximum 30 reports per day.`,
+        429
+      );
+    }
+
+    const { playerData, analysisData, videoAnalysisId, playerId } = await req.json();
+
+    if (!playerData || !analysisData) {
+      return createErrorResponse(
+        "Missing required fields: playerData and analysisData",
+        400
+      );
     }
 
     const systemPrompt = `You are a senior football scout at a top European club preparing an official scouting report. Generate professional, detailed reports suitable for presentation to club directors and technical staff.
@@ -134,73 +170,51 @@ Create a comprehensive, professional scouting report suitable for club directors
 
     console.log("Generating scouting report...");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
+    const response = await callLovableAI([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ]);
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
     if (!content) {
-      throw new Error("No content in AI response");
+      return createErrorResponse("No content in AI response", 500);
     }
 
-    let report;
-    try {
-      const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || 
-                        content.match(/```\n?([\s\S]*?)\n?```/) ||
-                        [null, content];
-      report = JSON.parse(jsonMatch[1] || content);
-    } catch (parseError) {
-      console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse scouting report");
+    const report = parseAIResponse(content);
+
+    // Save to database
+    const { data: savedReport, error: saveError } = await supabase
+      .from("scouting_reports")
+      .insert({
+        user_id: user.id,
+        player_id: playerId || null,
+        video_analysis_id: videoAnalysisId || null,
+        report_data: report,
+        scout_classification: report.scout_classification,
+        recommendation_action: report.recommendation?.action,
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error("Error saving report:", saveError);
+      // Continue even if save fails
     }
 
-    console.log("Scouting report generated:", { 
+    console.log("Scouting report generated:", {
+      report_id: savedReport?.id,
       classification: report.scout_classification,
-      action: report.recommendation?.action 
+      action: report.recommendation?.action,
     });
 
-    return new Response(
-      JSON.stringify({ report }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return createSuccessResponse({
+      report,
+      report_id: savedReport?.id,
+    });
   } catch (error) {
     console.error("generate-scouting-report error:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return createErrorResponse(error as Error);
   }
 });

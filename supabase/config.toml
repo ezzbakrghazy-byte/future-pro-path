@@ -1,13 +1,13 @@
 project_id = "iizdsoqzntkloqqrnerj"
 
 [functions.sports-coach-chat]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-video]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-scouting-report]
-verify_jwt = false
+verify_jwt = true
 
 [functions.player-club-matching]
-verify_jwt = false
+verify_jwt = true

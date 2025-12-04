@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import {
+  corsHeaders,
+  getSupabaseClient,
+  getAuthenticatedUser,
+  validateRateLimit,
+  callLovableAI,
+  createErrorResponse,
+} from "../_shared/utils.ts";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,12 +14,36 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, intent = 'general' } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    const token = getAuthenticatedUser(authHeader);
+    const supabase = getSupabaseClient(authHeader!);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
+
+    if (userError || !user) {
+      return createErrorResponse("Unauthorized", 401);
     }
+
+    // Rate limiting
+    const rateLimit = await validateRateLimit(
+      supabase,
+      user.id,
+      "sports-coach-chat",
+      200
+    );
+
+    if (!rateLimit.allowed) {
+      return createErrorResponse(
+        `Rate limit exceeded. Maximum 200 messages per day.`,
+        429
+      );
+    }
+
+    const { messages, intent = 'general', playerId } = await req.json();
 
     // Define system prompts based on intent
     const systemPrompts = {
@@ -31,38 +58,26 @@ serve(async (req) => {
 
     console.log(`Processing chat request with intent: ${intent}`);
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
+    const response = await callLovableAI(
+      [
+        { role: "system", content: systemPrompt },
+        ...messages,
+      ],
+      true // Enable streaming
+    );
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // Save user message to database
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === "user") {
+        await supabase.from("chat_messages").insert({
+          user_id: user.id,
+          player_id: playerId || null,
+          role: "user",
+          content: lastMessage.content,
+          intent: intent,
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI usage limit reached. Please add credits to continue." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error("AI gateway error");
     }
 
     return new Response(response.body, {
@@ -70,12 +85,6 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Error in sports-coach-chat:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return createErrorResponse(error as Error);
   }
 });
