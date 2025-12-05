@@ -13,6 +13,7 @@ import VideoAnalysis from "./pages/VideoAnalysis";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
+import PlayerProfile from "./pages/PlayerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +61,18 @@ const App = () => (
                   <Profile />
                 </ProtectedRoute>
               }
+            />
+            <Route
+              path="/player-profile"
+              element={
+                <ProtectedRoute>
+                  <PlayerProfile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/player-profile/:id"
+              element={<PlayerProfile />}
             />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
