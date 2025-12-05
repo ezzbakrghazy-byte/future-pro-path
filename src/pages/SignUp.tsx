@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ const SignUp = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signUp } = useAuth();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,25 +42,15 @@ const SignUp = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
+      const { error } = await signUp(email, password, fullName);
 
       if (error) throw error;
 
-      if (data.user) {
-        toast({
-          title: "Account created successfully!",
-          description: "Please check your email to verify your account.",
-        });
-        navigate("/sign-in");
-      }
+      toast({
+        title: "Account created successfully!",
+        description: "Please check your email to verify your account.",
+      });
+      navigate("/sign-in");
     } catch (error: any) {
       toast({
         title: "Sign up failed",

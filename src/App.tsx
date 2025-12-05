@@ -12,6 +12,7 @@ import About from "./pages/About";
 import VideoAnalysis from "./pages/VideoAnalysis";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Clubs />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               }
             />

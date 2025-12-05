@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,26 +14,22 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn, resetPassword } = useAuth();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await signIn(email, password);
 
       if (error) throw error;
 
-      if (data.user) {
-        toast({
-          title: "Welcome back!",
-          description: "You've successfully signed in.",
-        });
-        navigate("/video-analysis");
-      }
+      toast({
+        title: "Welcome back!",
+        description: "You've successfully signed in.",
+      });
+      navigate("/video-analysis");
     } catch (error: any) {
       toast({
         title: "Sign in failed",
@@ -56,9 +52,7 @@ const SignIn = () => {
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      const { error } = await resetPassword(email);
 
       if (error) throw error;
 

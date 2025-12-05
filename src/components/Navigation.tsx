@@ -71,6 +71,10 @@ const Navigation = () => {
                     {user.email}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    My Profile
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => signOut()}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
@@ -143,6 +147,17 @@ const Navigation = () => {
                 {user ? (
                   <>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        navigate("/profile");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      My Profile
+                    </Button>
                     <Button 
                       variant="outline" 
                       className="w-full"
