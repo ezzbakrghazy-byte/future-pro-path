@@ -73,7 +73,11 @@ const Navigation = () => {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => navigate("/profile")}>
                     <User className="mr-2 h-4 w-4" />
-                    My Profile
+                    Account Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/player-profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    Player Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => signOut()}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -156,7 +160,18 @@ const Navigation = () => {
                       }}
                     >
                       <User className="mr-2 h-4 w-4" />
-                      My Profile
+                      Account Settings
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        navigate("/player-profile");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      Player Profile
                     </Button>
                     <Button 
                       variant="outline" 
