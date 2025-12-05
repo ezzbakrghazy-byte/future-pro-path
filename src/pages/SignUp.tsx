@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,17 +45,34 @@ const SignUp = () => {
     try {
       const { error } = await signUp(email, password, fullName);
 
-      if (error) throw error;
+      if (error) {
+        // Check for specific error messages
+        if (error.message.includes('already registered')) {
+          throw new Error('This email is already registered. Please sign in instead.');
+        }
+        throw error;
+      }
 
-      toast({
-        title: "Account created successfully!",
-        description: "Please check your email to verify your account.",
-      });
-      navigate("/sign-in");
+      // Check if user is already signed in (email confirmation disabled)
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        toast({
+          title: "Account created successfully!",
+          description: "Welcome! Redirecting to your dashboard...",
+        });
+        setTimeout(() => navigate("/video-analysis"), 1000);
+      } else {
+        toast({
+          title: "Account created successfully!",
+          description: "Please check your email to verify your account before signing in.",
+        });
+        setTimeout(() => navigate("/sign-in"), 2000);
+      }
     } catch (error: any) {
       toast({
         title: "Sign up failed",
-        description: error.message,
+        description: error.message || "An error occurred during sign up",
         variant: "destructive",
       });
     } finally {

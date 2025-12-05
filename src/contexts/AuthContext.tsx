@@ -61,27 +61,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      return { error };
+      
+      if (error) {
+        console.error('Sign in error:', error.message);
+        return { error };
+      }
+      
+      if (data?.user) {
+        console.log('User signed in successfully:', data.user.email);
+      }
+      
+      return { error: null };
     } catch (error) {
+      console.error('Sign in exception:', error);
       return { error: error as Error };
     }
   };
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName || '',
           },
+          emailRedirectTo: `${window.location.origin}/sign-in`,
         },
       });
+      
+      // If email confirmation is disabled in Supabase, user will be logged in immediately
+      if (data?.user && data?.session) {
+        console.log('User signed up and logged in immediately');
+      }
+      
       return { error };
     } catch (error) {
       return { error: error as Error };
