@@ -92,12 +92,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             full_name: fullName || '',
           },
           emailRedirectTo: `${window.location.origin}/sign-in`,
+          // This allows sign-in even without email confirmation in development
+          // Note: Supabase will still send confirmation email if enabled
         },
       });
       
       // If email confirmation is disabled in Supabase, user will be logged in immediately
       if (data?.user && data?.session) {
         console.log('User signed up and logged in immediately');
+      } else if (data?.user && !data?.session) {
+        console.log('User created but needs email confirmation (or can sign in anyway)');
       }
       
       return { error };

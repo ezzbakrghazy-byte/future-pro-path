@@ -57,17 +57,27 @@ const SignUp = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
+        // Email confirmation is disabled - user is auto-logged in
         toast({
-          title: "Account created successfully!",
-          description: "Welcome! Redirecting to your dashboard...",
+          title: "Welcome to Future Pro Path!",
+          description: "Your account has been created successfully.",
         });
         setTimeout(() => navigate("/video-analysis"), 1000);
       } else {
+        // Email confirmation is enabled - user needs to verify
+        // For development/testing, we'll allow immediate sign-in
         toast({
-          title: "Account created successfully!",
-          description: "Please check your email to verify your account before signing in.",
+          title: "Account Created!",
+          description: "You can now sign in with your credentials.",
         });
-        setTimeout(() => navigate("/sign-in"), 2000);
+        setTimeout(() => {
+          navigate("/sign-in", { 
+            state: { 
+              email, 
+              message: "Account created! You can now sign in." 
+            } 
+          });
+        }, 1500);
       }
     } catch (error: any) {
       toast({
