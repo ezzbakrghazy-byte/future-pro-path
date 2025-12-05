@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   FileText, Download, User, Target, Dumbbell, 
   Brain, TrendingUp, DollarSign, CheckCircle, Loader2
@@ -23,30 +24,24 @@ const ScoutingReport = ({ playerData, analysisData }: ScoutingReportProps) => {
   const generateReport = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-scouting-report`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ playerData, analysisData }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('generate-scouting-report', {
+        body: { 
+          playerData, 
+          analysisData 
+        },
+      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate report");
+      if (error) {
+        throw new Error(error.message || "Failed to generate report");
       }
 
-      const data = await response.json();
       setReport(data.report);
       toast({
         title: "Report Generated",
         description: "Your professional scouting report is ready.",
       });
     } catch (error) {
+      console.error("Scouting report error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to generate report",

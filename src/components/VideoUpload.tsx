@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, Video, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VideoUploadProps {
   onAnalysisComplete?: (data: { analysis: any; highlights: any[]; playerInfo: any }) => void;
@@ -67,50 +68,72 @@ const VideoUpload = ({ onAnalysisComplete }: VideoUploadProps) => {
     setUploadProgress(0);
 
     try {
+      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90));
       }, 200);
 
-      await new Promise(r => setTimeout(r, 1000));
+      // Upload video to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `videos/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('videos')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('videos')
+        .getPublicUrl(filePath);
+
       clearInterval(progressInterval);
       setUploadProgress(100);
-
       setUploading(false);
       setAnalyzing(true);
       setStatus("analyzing");
 
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-video`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          videoId: crypto.randomUUID(),
+      // Call analyze-video function with auth
+      const { data, error } = await supabase.functions.invoke('analyze-video', {
+        body: {
+          videoUrl: publicUrl,
           position,
           fileName: file.name,
-          playerAge: playerAge || undefined,
-          playerHeight: playerHeight || undefined,
-        }),
+          playerAge: playerAge ? parseInt(playerAge) : undefined,
+          playerHeight: playerHeight ? parseInt(playerHeight) : undefined,
+        },
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Analysis failed");
+      if (error) {
+        throw new Error(error.message || "Analysis failed");
       }
 
-      const data = await response.json();
       setStatus("complete");
       toast({ title: "Analysis Complete", description: "Your video has been analyzed!" });
 
       onAnalysisComplete?.({
         analysis: data.analysis,
         highlights: data.highlights,
-        playerInfo: { name: playerName || "Unknown", age: playerAge ? parseInt(playerAge) : undefined, height: playerHeight ? parseInt(playerHeight) : undefined, position, fileName: file.name },
+        playerInfo: { 
+          name: playerName || "Unknown", 
+          age: playerAge ? parseInt(playerAge) : undefined, 
+          height: playerHeight ? parseInt(playerHeight) : undefined, 
+          position, 
+          fileName: file.name 
+        },
       });
     } catch (error) {
       setStatus("error");
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Analysis failed", variant: "destructive" });
+      console.error("Video analysis error:", error);
+      toast({ 
+        title: "Error", 
+        description: error instanceof Error ? error.message : "Analysis failed", 
+        variant: "destructive" 
+      });
     } finally {
       setUploading(false);
       setAnalyzing(false);

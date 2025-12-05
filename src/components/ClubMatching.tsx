@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Building2, MapPin, Trophy, TrendingUp, 
   CheckCircle, AlertCircle, Loader2, Star, Target
@@ -23,34 +24,25 @@ const ClubMatching = ({ playerProfile, analysisData }: ClubMatchingProps) => {
   const findMatches = async () => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/player-club-matching`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ 
-            playerProfile, 
-            analysisData,
-            preferences: {} 
-          }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke('player-club-matching', {
+        body: { 
+          playerProfile, 
+          analysisData,
+          preferences: {} 
+        },
+      });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to find matches");
+      if (error) {
+        throw new Error(error.message || "Failed to find matches");
       }
 
-      const data = await response.json();
       setMatchingResults(data);
       toast({
         title: "Matches Found",
         description: `Found ${data.matches?.length || 0} suitable clubs for you.`,
       });
     } catch (error) {
+      console.error("Club matching error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to find matches",

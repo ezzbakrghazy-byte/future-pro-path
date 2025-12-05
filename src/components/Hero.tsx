@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Video, LineChart, Sparkles } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Hero = () => {
+  const navigate = useNavigate();
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-accent/5">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-20">
@@ -24,11 +26,11 @@ const Hero = () => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Button size="lg" className="text-lg px-8 py-6 gap-2">
+            <Button size="lg" className="text-lg px-8 py-6 gap-2" onClick={() => navigate('/signup')}>
               Join as Player
               <ArrowRight className="h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-6">
+            <Button size="lg" variant="outline" className="text-lg px-8 py-6" onClick={() => navigate('/players')}>
               Scout Talent
             </Button>
           </div>

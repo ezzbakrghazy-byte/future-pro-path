@@ -1,11 +1,23 @@
 import { useState } from "react";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import logo from "@/assets/logo.png";
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b border-border">
@@ -46,8 +58,35 @@ const Navigation = () => {
             >
               About
             </NavLink>
-            <Button variant="default">Sign In</Button>
-            <Button variant="outline">Get Started</Button>
+            
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <User className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>
+                    {user.email}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Button variant="default" onClick={() => navigate("/sign-in")}>
+                  Sign In
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/sign-up")}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -101,12 +140,45 @@ const Navigation = () => {
                 About
               </NavLink>
               <div className="flex flex-col gap-2 px-4 pt-2">
-                <Button variant="default" className="w-full">
-                  Sign In
-                </Button>
-                <Button variant="outline" className="w-full">
-                  Get Started
-                </Button>
+                {user ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        signOut();
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      variant="default" 
+                      className="w-full"
+                      onClick={() => {
+                        navigate("/sign-in");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Sign In
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        navigate("/sign-up");
+                        setIsMenuOpen(false);
+                      }}
+                    >
+                      Get Started
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
