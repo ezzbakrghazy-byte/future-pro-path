@@ -14,7 +14,160 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      player_achievements: {
+        Row: {
+          created_at: string
+          date: string | null
+          description: string | null
+          id: string
+          player_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string | null
+          description?: string | null
+          id?: string
+          player_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          date?: string | null
+          description?: string | null
+          id?: string
+          player_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_achievements_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_profiles: {
+        Row: {
+          age: number | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          current_club: string | null
+          defending: number | null
+          display_name: string
+          dribbling: number | null
+          height_cm: number | null
+          id: string
+          instagram_url: string | null
+          is_public: boolean | null
+          nationality: string | null
+          pace: number | null
+          passing: number | null
+          physical: number | null
+          position: string | null
+          preferred_foot: string | null
+          shooting: number | null
+          updated_at: string
+          user_id: string
+          weight_kg: number | null
+          youtube_url: string | null
+        }
+        Insert: {
+          age?: number | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          current_club?: string | null
+          defending?: number | null
+          display_name: string
+          dribbling?: number | null
+          height_cm?: number | null
+          id?: string
+          instagram_url?: string | null
+          is_public?: boolean | null
+          nationality?: string | null
+          pace?: number | null
+          passing?: number | null
+          physical?: number | null
+          position?: string | null
+          preferred_foot?: string | null
+          shooting?: number | null
+          updated_at?: string
+          user_id: string
+          weight_kg?: number | null
+          youtube_url?: string | null
+        }
+        Update: {
+          age?: number | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          current_club?: string | null
+          defending?: number | null
+          display_name?: string
+          dribbling?: number | null
+          height_cm?: number | null
+          id?: string
+          instagram_url?: string | null
+          is_public?: boolean | null
+          nationality?: string | null
+          pace?: number | null
+          passing?: number | null
+          physical?: number | null
+          position?: string | null
+          preferred_foot?: string | null
+          shooting?: number | null
+          updated_at?: string
+          user_id?: string
+          weight_kg?: number | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      player_videos: {
+        Row: {
+          analysis_data: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          player_id: string
+          thumbnail_url: string | null
+          title: string
+          video_url: string | null
+        }
+        Insert: {
+          analysis_data?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          player_id: string
+          thumbnail_url?: string | null
+          title: string
+          video_url?: string | null
+        }
+        Update: {
+          analysis_data?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          player_id?: string
+          thumbnail_url?: string | null
+          title?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_videos_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
